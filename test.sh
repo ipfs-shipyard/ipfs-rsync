@@ -1,16 +1,22 @@
 #!/bin/bash
 set -ex
 
-rm -rf test source
-ipfs files rm -r --force /test
-ipfs repo gc
+clean() {
+	rm -rf test source
+	#ipfs pin ls --type recursive | cut -d' ' -f1 | ipfs pin rm || :
+	ipfs files stat --hash /test | ipfs pin rm || :
+	ipfs files rm -r --force /test
+	ipfs repo gc
+}
+
+clean
 
 mkdir -p "source/test/a"
 echo a > "source/test/a/a"
 echo b > "source/test/a/b"
 echo b > "source/test/b"
 
-rsync -rtLivH --delete-after --delay-updates source/test . | ./ipfs-rsync
+rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
 
 ipfs files ls /test
 ipfs files ls /test/a
@@ -19,14 +25,15 @@ ipfs files read "/test/b"
 echo b >> "source/test/b"
 echo b > "source/test/a/a"
 
-rsync -rtLivH --delete-after --delay-updates source/test . | ./ipfs-rsync
+rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
 
 ipfs files read "/test/b"
 
 rm -r "source/test/a"
 
-rsync -rtLivH --delete-after --delay-updates source/test . | ./ipfs-rsync
+rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
 
 ipfs files ls /test
+ipfs pin ls
 
-rm -rf test source
+clean

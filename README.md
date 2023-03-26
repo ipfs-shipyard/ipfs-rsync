@@ -38,5 +38,5 @@ cat rsync.log | ipfs-rsync --local-prefix your_local_prefix --ipfs-prefix your_i
 #### For formal use
 
 ```sh
-rsync -i source destination | ipfs-sync
+rsync -i source destination | ipfs-sync --local-prefix your_local_prefix --ipfs-prefix your_ipfs_prefix --update-pin your_ipfs_path
 ```

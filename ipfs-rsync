@@ -12,10 +12,28 @@ def run(command, **kwargs):
     print(command)
     if not 'check' in kwargs and not args.force:
         kwargs['check'] = True
-    if args.quiet:
+    if not 'capture_output' in kwargs and args.quiet:
         kwargs['stdout'] = subprocess.DEVNULL
     if not args.dry_run:
-        subprocess.run(command, **kwargs)
+        return subprocess.run(command, **kwargs)
+
+def get_cid(ipfs_path):
+    try:
+        return run(['ipfs', 'files', 'stat', '--hash', ipfs_path], capture_output=True).stdout.decode().strip('\n')
+    except:
+        return None
+
+def update_pin(old_cid, new_cid):
+    if old_cid:
+        run(['ipfs', 'pin', 'update', old_cid, new_cid])
+    else:
+        run(['ipfs', 'pin', 'add', new_cid])
+
+def add(local_path, ipfs_path):
+    run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path])
+
+def delete(ipfs_path):
+    run(['ipfs', 'files', 'rm', '--force', ipfs_path])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -25,7 +43,11 @@ if __name__ == '__main__':
     parser.add_argument('--force', '-f', action='store_true', help="don't stop when ipfs commands fail")
     parser.add_argument('--quiet', '-q', action='store_true', help="don't show the outputs of ipfs commands")
     parser.add_argument('--no-tee', action='store_true', help="don't show the outputs of rsync")
+    parser.add_argument('--update-pin', default=None, help="unpin and pin the files under given ipfs path")
     args = parser.parse_args()
+
+    if args.update_pin:
+        old_cid = get_cid(args.update_pin)
 
     for line in sys.stdin:
         line = line.strip('\n')
@@ -36,20 +58,25 @@ if __name__ == '__main__':
             continue
         change = change.group().strip(' ')
         path = line[12:]
+        ipfs_path = args.ipfs_prefix + path
+        local_path = args.local_prefix + path
         if change == 'cd+++++++++': # New directory
-            run(['ipfs', 'files', 'mkdir', '-p', f'{args.ipfs_prefix}{path}'])
+            run(['ipfs', 'files', 'mkdir', '-p', ipfs_path])
         elif change == '>f+++++++++': # New file
-            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
+            add(local_path, ipfs_path)
         elif change.startswith('>f'): # Content-changed file
-            run(['ipfs', 'files', 'rm', '--force', f'{args.ipfs_prefix}{path}'])
-            run(['ipfs', 'repo', 'gc'])
-            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
+            delete(ipfs_path)
+            add(local_path, ipfs_path)
         elif change == '*deleting': # Deleted file or directory
-            run(['ipfs', 'files', 'rm', '-r', '--force', f'{args.ipfs_prefix}{path}'])
-            run(['ipfs', 'repo', 'gc'])
-        elif change.startswith('.d'): # Attribute-changed directory
+            delete(ipfs_path)
+        elif change.startswith('.d'): # Changed directory
             pass
         elif change.startswith('.f'): # Attribute-changed file
             pass
         else:
             print(f'[WARNING] Unrecognized change {change}.')
+
+    if args.update_pin:
+        new_cid = get_cid(args.update_pin)
+        update_pin(old_cid, new_cid)
+        run(['ipfs', 'repo', 'gc'])
