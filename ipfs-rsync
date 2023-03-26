@@ -20,8 +20,8 @@ def run(command, **kwargs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true', help="don't execute but only show the ipfs commands")
-    parser.add_argument('--local-prefix', default='', help="prefix for the path in local fs (default '')")
-    parser.add_argument('--ipfs-prefix', default='/', help="prefix for the path in ipfs (default '/')")
+    parser.add_argument('--local-prefix', default='', help="prefix for the path in local fs (default: '')")
+    parser.add_argument('--ipfs-prefix', default='/', help="prefix for the path in ipfs (default: '/')")
     parser.add_argument('--force', '-f', action='store_true', help="don't stop when ipfs commands fail")
     parser.add_argument('--quiet', '-q', action='store_true', help="don't show the outputs of ipfs commands")
     parser.add_argument('--no-tee', action='store_true', help="don't show the outputs of rsync")
