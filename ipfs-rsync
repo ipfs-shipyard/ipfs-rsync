@@ -9,28 +9,35 @@ def run(command, **kwargs):
     print(command)
     if not 'check' in kwargs:
         kwargs['check'] = True
+    if args.quiet:
+        kwargs['stdout'] = subprocess.DEVNULL
     if not args.dry_run:
         subprocess.run(command, **kwargs)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dry-run', action='store_true', help='don\'t execute but only show the ipfs commands')
+    parser.add_argument('--dry-run', action='store_true', help="don't execute but only show the ipfs commands")
+    parser.add_argument('--local-prefix', default='', help="prefix for the path in local fs (default '')")
+    parser.add_argument('--ipfs-prefix', default='/', help="prefix for the path in ipfs (default '/')")
+    parser.add_argument('--quiet', '-q', action='store_true', help="don't show the outputs of ipfs commands")
+    parser.add_argument('--no-tee', action='store_true', help="don't show the outputs of rsync")
     args = parser.parse_args()
 
     for line in sys.stdin:
         line = line.strip('\n')
         path = line[12:]
-        print(line)
+        if not args.no_tee:
+            print(line)
         if line.startswith('cd+++++++++'):
-            run(['ipfs', 'files', 'mkdir', '-p', f'/{path}'])
+            run(['ipfs', 'files', 'mkdir', '-p', f'{args.ipfs_prefix}{path}'])
         if line.startswith('>f+++++++++'):
-            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files=/{path}', f'{path}'])
+            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
         elif line.startswith('.d..t......'):
             pass
         elif line.startswith('>f.st......'):
-            run(['ipfs', 'files', 'rm', f'/{path}'])
+            run(['ipfs', 'files', 'rm', f'{args.ipfs_prefix}{path}'])
             run(['ipfs', 'repo', 'gc'])
-            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files=/{path}', f'{path}'])
+            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
         elif line.startswith('*deleting'):
-            run(['ipfs', 'files', 'rm', '-r', '--force', f'/{path}'])
+            run(['ipfs', 'files', 'rm', '-r', '--force', f'{args.ipfs_prefix}{path}'])
             run(['ipfs', 'repo', 'gc'])
