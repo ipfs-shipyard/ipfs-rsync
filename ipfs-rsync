@@ -1,0 +1,28 @@
+#!/bin/python
+import sys
+import subprocess
+
+def run(command, **kwargs):
+    print(command)
+    if not 'check' in kwargs:
+        kwargs['check'] = True
+    subprocess.run(command, **kwargs)
+
+if __name__ == '__main__':
+    for line in sys.stdin:
+        line = line.strip('\n')
+        path = line[12:]
+        print(line)
+        if line.startswith('cd+++++++++'):
+            run(['ipfs', 'files', 'mkdir', '-p', f'/{path}'])
+        if line.startswith('>f+++++++++'):
+            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files=/{path}', f'{path}'])
+        elif line.startswith('.d..t......'):
+            pass
+        elif line.startswith('>f.st......'):
+            run(['ipfs', 'files', 'rm', f'/{path}'])
+            run(['ipfs', 'repo', 'gc'])
+            run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files=/{path}', f'{path}'])
+        elif line.startswith('*deleting'):
+            run(['ipfs', 'files', 'rm', '-r', '--force', f'/{path}'])
+            run(['ipfs', 'repo', 'gc'])
