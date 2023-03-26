@@ -1,9 +1,12 @@
 #!/bin/python
 import argparse
+import re
 import sys
 import subprocess
 
 args = None
+
+change_re = re.compile(r'[<>ch.][fdLDS][c.+ ?][s.+ ?][t.+ ?][p.+ ?][o.+ ?][g.+ ?][unb.+ ?][a.+ ?][x.+ ?] |\*deleting  ')
 
 def run(command, **kwargs):
     print(command)
@@ -26,19 +29,27 @@ if __name__ == '__main__':
 
     for line in sys.stdin:
         line = line.strip('\n')
-        path = line[12:]
         if not args.no_tee:
             print(line)
-        if line.startswith('cd+++++++++'):
+        change = change_re.match(line)
+        if change is None:
+            continue
+        change = change.group().strip(' ')
+        path = line[12:]
+        if change == 'cd+++++++++': # New directory
             run(['ipfs', 'files', 'mkdir', '-p', f'{args.ipfs_prefix}{path}'])
-        if line.startswith('>f+++++++++'):
+        elif change == '>f+++++++++': # New file
             run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
-        elif line.startswith('.d..t......'):
-            pass
-        elif line.startswith('>f.st......'):
-            run(['ipfs', 'files', 'rm', f'{args.ipfs_prefix}{path}'])
+        elif change.startswith('>f'): # Content-changed file
+            run(['ipfs', 'files', 'rm', '--force', f'{args.ipfs_prefix}{path}'])
             run(['ipfs', 'repo', 'gc'])
             run(['ipfs', 'add', '-q', '--nocopy', '--pin=false', f'--to-files={args.ipfs_prefix}{path}', f'{args.local_prefix}{path}'])
-        elif line.startswith('*deleting'):
+        elif change == '*deleting': # Deleted file or directory
             run(['ipfs', 'files', 'rm', '-r', '--force', f'{args.ipfs_prefix}{path}'])
             run(['ipfs', 'repo', 'gc'])
+        elif change.startswith('.d'): # Attribute-changed directory
+            pass
+        elif change.startswith('.f'): # Attribute-changed file
+            pass
+        else:
+            print(f'Unrecognized change {change}.')

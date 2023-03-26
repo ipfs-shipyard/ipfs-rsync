@@ -17,6 +17,7 @@ ipfs files ls /test/a
 ipfs files read "/test/b"
 
 echo b >> "source/test/b"
+echo b > "source/test/a/a"
 
 rsync -rtLivH --delete-after --delay-updates source/test . | ./ipfs-rsync
 
