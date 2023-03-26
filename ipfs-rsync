@@ -1,14 +1,22 @@
 #!/bin/python
+import argparse
 import sys
 import subprocess
+
+args = None
 
 def run(command, **kwargs):
     print(command)
     if not 'check' in kwargs:
         kwargs['check'] = True
-    subprocess.run(command, **kwargs)
+    if not args.dry_run:
+        subprocess.run(command, **kwargs)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dry-run', action='store_true', help='don\'t execute but only show the ipfs commands')
+    args = parser.parse_args()
+
     for line in sys.stdin:
         line = line.strip('\n')
         path = line[12:]
