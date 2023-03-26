@@ -52,4 +52,4 @@ if __name__ == '__main__':
         elif change.startswith('.f'): # Attribute-changed file
             pass
         else:
-            print(f'Unrecognized change {change}.')
+            print(f'[WARNING] Unrecognized change {change}.')
