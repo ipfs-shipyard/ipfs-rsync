@@ -17,25 +17,6 @@ def run(command, **kwargs):
     if not args.dry_run:
         return subprocess.run(command, **kwargs)
 
-def get_cid(ipfs_path):
-    try:
-        return run(['ipfs', 'files', 'stat', '--hash', ipfs_path], capture_output=True).stdout.decode().strip('\n')
-    except:
-        return None
-
-def is_pinned(cid):
-    try:
-        run(['ipfs', 'pin', 'ls', '--quiet', old_cid])
-        return True
-    except:
-        return False
-
-def update_pin(old_cid, new_cid):
-    if old_cid and is_pinned(old_cid):
-        run(['ipfs', 'pin', 'update', old_cid, new_cid])
-    else:
-        run(['ipfs', 'pin', 'add', new_cid])
-
 def add(local_path, ipfs_path):
     run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path])
 
@@ -50,11 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--force', '-f', action='store_true', help="don't stop when ipfs commands fail")
     parser.add_argument('--quiet', '-q', action='store_true', help="don't show the outputs of ipfs commands")
     parser.add_argument('--no-tee', action='store_true', help="don't show the outputs of rsync")
-    parser.add_argument('--update-pin', default=None, help="unpin and pin the files under given ipfs path")
     args = parser.parse_args()
-
-    if args.update_pin:
-        old_cid = get_cid(args.update_pin)
 
     for line in sys.stdin:
         line = line.strip('\n')
@@ -82,8 +59,3 @@ if __name__ == '__main__':
             pass
         else:
             print(f'[WARNING] Unrecognized change {change}.')
-
-    if args.update_pin:
-        new_cid = get_cid(args.update_pin)
-        update_pin(old_cid, new_cid)
-        run(['ipfs', 'repo', 'gc'])

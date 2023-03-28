@@ -16,7 +16,7 @@ echo a > "source/test/a/a"
 echo b > "source/test/a/b"
 echo b > "source/test/b"
 
-rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
+rsync -rtLivH --delete source/test . | ./ipfs-rsync
 
 ipfs files ls /test
 ipfs files ls /test/a
@@ -25,13 +25,13 @@ ipfs files read "/test/b"
 echo b >> "source/test/b"
 echo b > "source/test/a/a"
 
-rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
+rsync -rtLivH --delete source/test . | ./ipfs-rsync
 
 ipfs files read "/test/b"
 
 rm -r "source/test/a"
 
-rsync -rtLivH --delete source/test . | ./ipfs-rsync --update-pin /test
+rsync -rtLivH --delete source/test . | ./ipfs-rsync
 
 ipfs files ls /test
 ipfs pin ls
