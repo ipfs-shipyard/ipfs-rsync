@@ -23,8 +23,15 @@ def get_cid(ipfs_path):
     except:
         return None
 
+def is_pinned(cid):
+    try:
+        run(['ipfs', 'pin', 'ls', '--quiet', old_cid])
+        return True
+    except:
+        return False
+
 def update_pin(old_cid, new_cid):
-    if old_cid:
+    if old_cid and is_pinned(old_cid):
         run(['ipfs', 'pin', 'update', old_cid, new_cid])
     else:
         run(['ipfs', 'pin', 'add', new_cid])
