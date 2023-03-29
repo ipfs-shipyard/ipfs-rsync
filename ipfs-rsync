@@ -18,7 +18,11 @@ def run(command, **kwargs):
         return subprocess.run(command, **kwargs)
 
 def add(local_path, ipfs_path):
-    run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path])
+    output = run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path], check=False, capture_output=True)
+    if output.returncode != 0 and output.stderr.decode().startswith('Error: data in file did not match'):
+        cid = output.stdout.decode().strip('\n')
+        run(['ipfs', 'block', 'rm', '--force', cid])
+        output = run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path])
 
 def delete(ipfs_path):
     run(['ipfs', 'files', 'rm', '--force', ipfs_path])

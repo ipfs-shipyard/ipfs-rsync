@@ -9,31 +9,35 @@ clean() {
 	ipfs repo gc
 }
 
+output() {
+	ipfs filestore ls
+}
+
 clean
 
-mkdir -p "source/test/a"
-echo a > "source/test/a/a"
-echo b > "source/test/a/b"
-echo b > "source/test/b"
+mkdir -p "source/test/ab"
+echo a > "source/test/ab/a"
+echo b > "source/test/ab/b"
+echo c > "source/test/c"
+echo d > "source/test/d"
 
 rsync -rtLivH --delete source/test . | ./ipfs-rsync
 
-ipfs files ls /test
-ipfs files ls /test/a
-ipfs files read "/test/b"
+output
 
-echo b >> "source/test/b"
-echo b > "source/test/a/a"
-
-rsync -rtLivH --delete source/test . | ./ipfs-rsync
-
-ipfs files read "/test/b"
-
-rm -r "source/test/a"
+echo aa > "source/test/ab/a"
+echo ab > "source/test/ab/b"
+echo d > "source/test/c"
+echo c > "source/test/d"
 
 rsync -rtLivH --delete source/test . | ./ipfs-rsync
 
-ipfs files ls /test
-ipfs pin ls
+output
+
+rm -r "source/test/ab"
+
+rsync -rtLivH --delete source/test . | ./ipfs-rsync
+
+output
 
 clean
