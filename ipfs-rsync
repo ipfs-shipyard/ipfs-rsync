@@ -1,0 +1,65 @@
+#!/bin/python
+import argparse
+import re
+import sys
+import subprocess
+
+args = None
+
+change_re = re.compile(r'[<>ch.][fdLDS][c.+ ?][s.+ ?][t.+ ?][p.+ ?][o.+ ?][g.+ ?][unb.+ ?][a.+ ?][x.+ ?] |\*deleting  ')
+
+def run(command, **kwargs):
+    print(command)
+    if not 'check' in kwargs and not args.force:
+        kwargs['check'] = True
+    if not 'capture_output' in kwargs and args.quiet:
+        kwargs['stdout'] = subprocess.DEVNULL
+    if not args.dry_run:
+        return subprocess.run(command, **kwargs)
+
+def add(local_path, ipfs_path):
+    output = run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path], check=False, capture_output=True)
+    if output.returncode != 0 and output.stderr.decode().startswith('Error: data in file did not match'):
+        cid = output.stdout.decode().strip('\n')
+        run(['ipfs', 'block', 'rm', '--force', cid])
+        output = run(['ipfs', 'add', '-q', '--pin=false', '--nocopy', f'--to-files={ipfs_path}', local_path])
+
+def delete(ipfs_path):
+    run(['ipfs', 'files', 'rm', '--force', ipfs_path])
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dry-run', action='store_true', help="don't execute but only show the ipfs commands")
+    parser.add_argument('--local-prefix', default='', help="prefix for the path in local fs (default: '')")
+    parser.add_argument('--ipfs-prefix', default='/', help="prefix for the path in ipfs (default: '/')")
+    parser.add_argument('--force', '-f', action='store_true', help="don't stop when ipfs commands fail")
+    parser.add_argument('--quiet', '-q', action='store_true', help="don't show the outputs of ipfs commands")
+    parser.add_argument('--no-tee', action='store_true', help="don't show the outputs of rsync")
+    args = parser.parse_args()
+
+    for line in sys.stdin:
+        line = line.strip('\n')
+        if not args.no_tee:
+            print(line)
+        change = change_re.match(line)
+        if change is None:
+            continue
+        change = change.group().strip(' ')
+        path = line[12:]
+        ipfs_path = args.ipfs_prefix + path
+        local_path = args.local_prefix + path
+        if change == 'cd+++++++++': # New directory
+            run(['ipfs', 'files', 'mkdir', '-p', ipfs_path])
+        elif change == '>f+++++++++': # New file
+            add(local_path, ipfs_path)
+        elif change.startswith('>f'): # Content-changed file
+            delete(ipfs_path)
+            add(local_path, ipfs_path)
+        elif change == '*deleting': # Deleted file or directory
+            delete(ipfs_path)
+        elif change.startswith('.d'): # Changed directory
+            pass
+        elif change.startswith('.f'): # Attribute-changed file
+            pass
+        else:
+            print(f'[WARNING] Unrecognized change {change}.')
